@@ -1,0 +1,93 @@
+{% extends "bootstrap/base.html" %}
+
+{% block navbar %}
+    {{nav.top.render()}}
+{% endblock %}
+
+{% block styles %}
+    {{super()}}
+    <link rel="stylesheet"
+      href="{{url_for('.static', filename='mystyle.css')}}">
+{% endblock %}
+
+    {% block content %}
+        <div id="main" class='container'>
+            <div class="col-md-12">
+                <div class="row">
+                    <div id="voucher-box" class="container">
+                        <div id="heading" class="row">
+                            <h4 id="voucher-title"><strong><em></em></strong></h4>
+                            <!--<button id="auto" class="btn btn-default" type="button"><strong>Auto</strong></button>-->
+                        </div>
+                        <div id="body" class="row">
+                            <form>
+                                <label>Balance: €
+                                    <input id="balance" type="number" min="1" max="999"> .00
+                                </label>
+                                <label id="quantity-lbl">Quantity:
+                                    <input id="qty" type="number" min="1" max="999">
+                                </label>
+                                <br><br>
+                                <label>Expires:
+                                    <input id="day" type="number" min="1" max="30">-
+                                    <input id="month" type="number" min="1" max="12">-
+                                    <input id="year" type="number" min="2016" max="2026">
+                                </label>
+                                <br>
+                                <button id="create-voucher" class="btn btn-default" type="button"><strong>Create Voucher</strong></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div id='status' class="row">
+                    </div>
+                </div>
+                <div id="history" class="row">
+                    <h2>Voucher History</h2>
+                    <hr>
+                    <table id="table" class="table-striped">
+                        <tr>
+                            <th>Serial#</th>
+                            <th>Original Balance</th>
+                            <th>Remaining Balance</th>
+                            <th>Created On</th>
+                            <th>Expires</th>
+                        </tr>
+                    </table>
+                    <table id='insert' class="table-striped">
+                    <table>
+                </div>
+            </div>
+        </div>
+        <script type='text/javascript'>
+            var button = document.getElementById('create-voucher')
+            button.onclick = createVoucher;
+            //var responseObject = null;
+            function createVoucher (){
+                var balance = document.getElementById('balance').value;
+                var year = document.getElementById('year').value;
+                var month = document.getElementById('month').value;
+                var day = document.getElementById('day').value;
+                var expiry = year + '-' + month + '-' + day;
+                var data = { 'originalBalance' : balance, 'expiryDate' : expiry };
+                xhr = new XMLHttpRequest();
+                xhr.open('POST', '{{ url_for('vouchers')}}');
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.send(JSON.stringify(data));
+                xhr.onload = function(){
+                    console.log(xhr.responseText);
+                    var responseObject = JSON.parse(xhr.responseText);
+                    document.getElementById('status').innerHTML = '<div class="alert alert-success"><strong>Success!</strong> Voucher with Serial: <strong>' + responseObject.serial + "</strong> created.</div>";
+                    xhr = new XMLHttpRequest();
+                    xhr.open('GET', '{{ url_for('vouchers') }}' +'/'+responseObject.ref.slice(22));
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.send(null);
+                    xhr.onload = function(){
+                        resp = JSON.parse(xhr.responseText);
+                        var text = document.getElementById('table').innerHTML.slice(0, -8);
+                        document.getElementById('table').innerHTML = text + '<tr><td>'+resp.serial+'</td><td>€'+resp.originalBalance+'</td><td>€'+resp.remainingBalance+'</td><td>'+resp.issueDate.slice(0, 10)+'</td><td>'+resp.expiryDate.slice(0, 10)+'</td></tr>';
+                    }
+                }
+            }
+
+        </script>
+    {% endblock %}

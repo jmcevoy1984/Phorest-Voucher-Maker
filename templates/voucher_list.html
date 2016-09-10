@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<nav id="search-bar" class="navbar navbar-default">
+                    <div class="navbar-collapse collapse">
+                      <ul id="search-items" class="nav navbar-nav">
+                        <span id="loading-gif"></span>
+                        <label>Find Serial: <input id="search-box" type='text'></label><button id="search-button">Search</button>
+                      </ul>
+                    </div>
+                </nav>
+
+        <div id="main" class="container">
+            <div id='results'>Showing: </div>
+            <div id="header" class="container">
+                <h3 id='voucher-list'>Voucher List</h3>
+                <button id="next" class='btn btn-default'>Next</button>
+                <button id="prev" class='btn btn-default'>Prev</button>
+                <hr>
+            </div>
+            <div class="container">
+                <table id="table" class="table table-striped">
+                    <tr>
+                    <th>Client</th>
+                    <th>Serial#</th>
+                    <th>Original Balance</th>
+                    <th>Remaining Balance</th>
+                    <th>Issue Date</th>
+                    <th>Expiry Date</th>
+                    </tr>
+
+                </table>
+            </div>
+        </div>
+        <script type="text/javascript" src='/static/ajax.js'>
+        </script>
+        
+{% endblock %}

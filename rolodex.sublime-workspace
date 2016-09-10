@@ -1,0 +1,318 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "/home/joe/flask/REST/app.py",
+			"settings":
+			{
+				"buffer_size": 8022,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "from flask import abort\nfrom app import app, db\nfrom models import Staff_Member, User\nfrom flask_restful import Api, Resource, reqparse, fields, marshal_with, marshal\n\n\n#Apply the Api fuction to the imported 'app' and then return the modified app to 'api'\napi = Api(app)\n\n#API JSON ROUTES\n\n'''--------User Resources-------'''\n\n#Creates a dictionary of 'fields' to be used by the marshal function (or marshal_with decorator) for output.\n#When using this function any field/attribute not listed here will be ignored when outputting the model.\n\n\n\nuser_fields = {\n\n	'id' : fields.Raw,\n	'email' : fields.String,\n	'password' : fields.String,\n	'staff_id' : fields.Raw\n\n}\n\nstaff_fields = {\n	\n	'id' : fields.Raw,\n	'first_name' : fields.String,\n	'last_name' : fields.String,\n	'team': fields.String,\n	'team_lead' : fields.String,\n	'location' : fields.String,\n	'active_regions' : fields.String,\n	''\n	'user_id' : fields.Raw\n\n}\n\n#Defining API resources\n#----------------------\n\n#Create a 'UserList' class that subclasses \"Resource\".\n#Uses the 'reqparse' object to parse the request and ensure it is valid.\n\nclass UserListAPI(Resource):\n	def __init__(self):\n		self.reqparse = reqparse.RequestParser()\n		self.reqparse.add_argument('email', type = str, help = 'No User email provided',\nlocation = 'json')\n		self.reqparse.add_argument('password', type = str, help = 'No User password provided',\n			location = 'json')\n		super(UserListAPI, self).__init__()\n\n	def post(self):\n		args = self.reqparse.parse_args()\n		if User.query.filter_by(email=args['email']).first():\n			abort(409)\n		else:\n			user = User(args['email'], args['password'])\n			db.session.add(user)\n			db.session.commit()\n			user.staff_id = user.id\n			member = Staff_Member()\n			member.id = user.id\n			db.session.add(member)\n			db.session.commit()\n			print(member.__dict__)\n			return { 'result' : True }, 201\n\n	def get(self):\n		if not User.query.all():\n			abort(404)\n		else:\n			all_users = User.query.all()\n			output_users = []\n			for user in all_users:\n				output_users.append(marshal(user, user_fields))\n		return { 'Users' : output_users }, 200\n\n\nclass UserAPI(Resource):\n	def __init__(self):\n		self.reqparse = reqparse.RequestParser()\n		self.reqparse.add_argument('email', type = str, unique = True, location = 'json')\n		self.reqparse.add_argument('password', type = str, unique = True, location = 'json')\n		super(UserAPI, self).__init__()\n\n	@marshal_with(user_fields)\n	def get(self, id):\n		if not User.query.get(id):\n			abort(404)\n		else:\n			user = User.query.get(id)\n		return user, 200\n\n	def put(self, id):\n		if not User.query.get(id):\n			abort(404)\n		else:\n			user = User.query.get(id)\n			args = self.reqparse.parse_args()\n			for key, value in args.items():\n				if hasattr(user, key) and key != 'staff_id':\n					setattr(user, key, value)\n			db.session.commit()\n		return { 'result': True }, 200\n\n	def delete(self, id):\n		if not User.query.get(id):\n			abort(404)\n		else:\n			db.session.delete(id)\n			db.session.commit()\n		return { 'result' : True }, 200\n\n#-------Staff----------\n\nclass StaffListAPI(Resource):\n		\n	def get(self):\n		if not Staff_Member.query.all():\n			abort(404)\n		else:\n			all_members = Staff_Member.query.all()\n			output_members = []\n			for member in all_members:\n				output_members.append(marshal(member, staff_fields))\n		return { 'Members' : output_members }, 200\n\n\nclass MemberAPI(Resource):\n	def __init__(self):\n		self.reqparse = reqparse.RequestParser()\n		self.reqparse.add_argument('first_name', type = str, default='', location = 'json')\n		self.reqparse.add_argument('last_name', type = str, default='', location = 'json')\n		self.reqparse.add_argument('team', type = str, default='', location = 'json')\n		self.reqparse.add_argument('manager', type = str, default='', location = 'json')\n		self.reqparse.add_argument('team_lead', type = str, default='', location = 'json')\n		self.reqparse.add_argument('role', type = str, default='', location = 'json')\n		self.reqparse.add_argument('extension', type = int, default='', location = 'json')\n		self.reqparse.add_argument('phone_number', type = int, default='', location = 'json')\n		self.reqparse.add_argument('location', type = str, default='', location = 'json')\n		self.reqparse.add_argument('active_regions', type = str, default='', location = 'json')\n		self.reqparse.add_argument('office_hours', type = str, default='', location = 'json')\n		self.reqparse.add_argument('duties', type = str, default='', location = 'json')\n		super(MemberAPI, self).__init__()\n\n	@marshal_with(staff_fields)\n	def get(self, id):\n		if not Staff_Member.query.get(id):\n			abort(404)\n		else:\n			member = Staff_Member.query.get(id)\n		return member, 200\n\n	def put(self, id):\n		if not Staff_Member.query.get(id):\n			abort(404)\n		else:\n			member = Staff_Member.query.get(id)\n			args = self.reqparse.parse_args()\n			for key, value in args.items():\n				if hasattr(member, key) and not value:\n					setattr(member, key, value)\n			db.session.commit()\n		return { 'result': True }, 200\n\n	def delete(self, id):\n		if not Staff_Member.query.get(id):\n			abort(404)\n		else:\n			db.session.delete(id)\n			db.session.commit()\n		return { 'result' : True }, 200\n\n#Adding the objects, routes and endpoints to the API\napi.add_resource(UserListAPI, '/api/users', endpoint='users')\napi.add_resource(UserAPI, '/api/users/<int:id>', endpoint='user')\napi.add_resource(StaffListAPI, '/api/staff', endpoint='staff')\napi.add_resource(MemberAPI, '/api/staff/<int:id>', endpoint='member')",
+			"file": "/home/joe/flask/REST/api_json.py",
+			"file_size": 5496,
+			"file_write_time": 131020394173709725,
+			"settings":
+			{
+				"buffer_size": 5444,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/home/joe/flask/REST/models.py",
+			"settings":
+			{
+				"buffer_size": 2206,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 96.0,
+		"last_filter": "Install",
+		"selected_items":
+		[
+			[
+				"Install",
+				"Package Control: Install Package"
+			],
+			[
+				"Vir",
+				"Virtualenv: Activate"
+			],
+			[
+				"Package Control: In",
+				"Package Control: Install Package"
+			],
+			[
+				"Pac",
+				"Preferences: Browse Packages"
+			]
+		],
+		"width": 449.0
+	},
+	"console":
+	{
+		"height": 139.0,
+		"history":
+		[
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by) ",
+			"Package Control: Install Package"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/joe/flask/REST"
+	],
+	"file_history":
+	[
+		"/home/joe/flask/REST/views.py",
+		"/home/joe/flask/REST/views.py~",
+		"/home/joe/flask/voucher/navbar.py",
+		"/home/joe/flask/voucher/views.py",
+		"/home/joe/flask/voucher/shared.py",
+		"/home/joe/flask/voucher/models.py",
+		"/home/joe/flask/voucher/client_update.xml",
+		"/home/joe/flask/voucher/client_vouchers.xml",
+		"/home/joe/flask/voucher/voucher_api.py",
+		"/home/joe/flask/voucher/helper_functions.py",
+		"/home/joe/.config/sublime-text-3/Packages/User/voucher.sublime-project"
+	],
+	"find":
+	{
+		"height": 27.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"from",
+			"())))\n"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 2,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "/home/joe/flask/REST/app.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8022,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								7657,
+								7657
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 5010.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "/home/joe/flask/REST/api_json.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 5444,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								885,
+								885
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 278.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/home/joe/flask/REST/models.py",
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 2206,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1235,
+								1235
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 240.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "Packages/Virtualenv/Python + Virtualenv.sublime-build",
+	"project": "rolodex.sublime-project",
+	"replace":
+	{
+		"height": 50.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 209.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

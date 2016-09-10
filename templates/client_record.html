@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <script type="text/javascript">
+        var ref = '{{ ref }}';
+        console.log(ref);
+    </script>
+    <div id='content' class='container'>
+        <div class='container'>
+            <h3><strong>Client Details</strong></h3>
+            <hr>
+            <table id='client-table' class='table table-striped'>
+                <tr>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                </tr>
+            </table>
+        </div>
+        <div id='vouchers' class="container">
+            <h4><strong>Vouchers Owned</strong></h4>
+            <hr>
+            <table id="voucher-table" class="table table-striped">
+                <tr>
+                <th>Serial#</th>
+                <th>Original Balance</th>
+                <th>Remaining Balance</th>
+                <th>Issue Date</th>
+                <th>Expiry Date</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+<script type="text/javascript" src="/static/clientAjax.js"></script>
+{% endblock %}
